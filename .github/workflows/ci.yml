@@ -1,0 +1,131 @@
+# File: taskflow-cloud/.github/workflows/ci.yml
+# Trigger: Runs on every push to any branch AND on pull requests to main
+# Purpose: Make sure the code builds correctly before allowing merge
+
+name: CI — Test and Build
+
+on:
+  push:
+    branches: ['**']        # Every branch push triggers this
+  pull_request:
+    branches: [main]        # PRs to main trigger this
+
+jobs:
+
+  # ── Job 1: Test the Backend ──────────────────────────────────────────────
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest   # GitHub provides a free Ubuntu VM
+
+    steps:
+      # Download your repo code into the VM
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install Node.js 18
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      # Install dependencies (uses exact versions from package-lock.json)
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      # Run tests
+      - name: Run backend tests
+        working-directory: ./backend
+        run: npm test
+
+  # ── Job 2: Build the Frontend ────────────────────────────────────────────
+  build-frontend:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      # This catches any build errors before deployment
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://placeholder:5000
+
+  # ── Job 3: Build & Push Docker Images ────────────────────────────────────
+  # Only runs if both previous jobs pass
+  build-and-push:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [test-backend, build-frontend]   # Wait for both jobs above
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Log into Docker Hub using your secrets
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Set up Docker Buildx (advanced builder with caching support)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build backend image and push to Docker Hub
+      # Tags: "latest" + the git commit hash (for traceability)
+      # Example tags:
+      #   yourusername/taskflow-backend:latest
+      #   yourusername/taskflow-backend:abc1234def (commit hash)
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/taskflow-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/taskflow-backend:${{ github.sha }}
+          cache-from: type=gha        # Use GitHub Actions cache
+          cache-to: type=gha,mode=max
+
+      # Build frontend image and push to Docker Hub
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/taskflow-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/taskflow-frontend:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://${{ secrets.EC2_HOST }}:5000
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Print a summary
+      - name: CI Summary
+        run: |
+          echo "================================================"
+          echo "✅ CI Pipeline completed successfully!"
+          echo "Backend image: ${{ secrets.DOCKER_USERNAME }}/taskflow-backend:latest"
+          echo "Frontend image: ${{ secrets.DOCKER_USERNAME }}/taskflow-frontend:latest"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "================================================"

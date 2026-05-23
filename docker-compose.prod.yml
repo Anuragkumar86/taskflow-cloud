@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+
+  # Backend — pulls from Docker Hub
+  backend:
+    image: ${anurag8651}/taskflow-backend:latest
+    container_name: taskflow_backend
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      # These come from the .env file on EC2
+      DB_HOST: ${DB_HOST}
+      DB_PORT: 5432
+      DB_NAME: taskflow
+      DB_USER: askflow_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 7d
+      REDIS_URL: redis://taskflow_redis:6379
+      FRONTEND_URL: http://${EC2_IP}:3000
+      AWS_REGION: ap-south-1
+      AWS_S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      # No AWS keys needed — EC2 IAM role handles S3 access automatically
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+    networks:
+      - taskflow_prod
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend — pulls from Docker Hub
+  frontend:
+    image: ${anurag8651}/taskflow-frontend:latest
+    container_name: taskflow_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - taskflow_prod
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis — runs in a container (not AWS ElastiCache — saves cost)
+  redis:
+    image: redis:7-alpine
+    container_name: taskflow_redis
+    restart: always
+    volumes:
+      - redis_prod:/data
+    networks:
+      - taskflow_prod
+
+  # Note: No postgres here — using AWS RDS
+
+networks:
+  taskflow_prod:
+    driver: bridge
+
+volumes:
+  redis_prod:

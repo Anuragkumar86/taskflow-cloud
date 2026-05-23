@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+
+  # Build backend production image
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ${anurag8651}/taskflow-backend:latest
+    # No ports, no volumes — this is just a build definition
+
+  # Build frontend production image
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Replace YOUR_EC2_IP with your actual EC2 public IP
+        NEXT_PUBLIC_API_URL: http://${65.2.33.78:-localhost}:5000
+    image: ${anurag8651}/taskflow-frontend:latest

@@ -1,0 +1,34 @@
+# Node modules (never commit these)
+node_modules/
+.npm/
+
+# Environment files (NEVER commit — contain secrets)
+.env
+.env.local
+.env.production.local
+backend/.env
+frontend/.env.local
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+
+# Uploads (local development files)
+backend/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Terraform (contain state and secrets)
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+
+# Docker override files
+docker-compose.override.yml

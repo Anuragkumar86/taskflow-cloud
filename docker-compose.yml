@@ -1,0 +1,102 @@
+services:
+
+  # Local PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: taskflow_user
+      POSTGRES_PASSWORD: localpassword123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - taskflow_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow_user -d taskflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Local Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: taskflow_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - taskflow_local
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+
+  # Backend — built from your source code
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: taskflow_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: taskflow
+      DB_USER: taskflow_user
+      DB_PASSWORD: localpassword123
+      JWT_SECRET: local_dev_jwt_secret_key_change_in_production
+      JWT_EXPIRES_IN: 7d
+      REDIS_URL: redis://redis:6379
+      FRONTEND_URL: http://localhost:3000
+      AWS_REGION: ap-south-1
+      # Fill these in your .env or leave empty for local testing without S3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-}
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - taskflow_local
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  # Frontend — built from your source code
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5000
+    container_name: taskflow_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - taskflow_local
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  taskflow_local:
+    driver: bridge
+
+
+
+

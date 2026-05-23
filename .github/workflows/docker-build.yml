@@ -1,0 +1,88 @@
+# File: .github/workflows/docker-build.yml
+# Purpose: When you push to main branch, automatically build and push
+#          Docker images to Docker Hub
+# This is CI only — no auto-deployment to EC2
+# After this runs, you manually pull the new image on EC2
+
+name: Build and Push to Docker Hub
+
+# Trigger: only when you push/merge code to the main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Download your code into the GitHub Actions runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 3: Set up Docker Buildx (faster builds with caching)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 4: Build backend image and push to Docker Hub
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/taskflow-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Step 5: Build frontend image and push to Docker Hub
+      # NEXT_PUBLIC_API_URL is baked into the frontend at build time
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/taskflow-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://${{ secrets.EC2_IP }}:5000
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Step 6: Print summary
+      - name: Done
+        run: |
+          echo "✅ Docker images pushed to Docker Hub"
+          echo "Backend: ${{ secrets.DOCKER_USERNAME }}/taskflow-backend:latest"
+          echo "Frontend: ${{ secrets.DOCKER_USERNAME }}/taskflow-frontend:latest"
+          echo ""
+          echo "Now go to EC2 and run:"
+          echo "  docker-compose -f docker-compose.prod.yml pull"
+          echo "  docker-compose -f docker-compose.prod.yml up -d"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# kubectl create secret generic taskflow-secrets `
+#   --namespace taskflow `
+#   --from-literal=db-host=taskflow-db.c5my2q0w2krr.ap-south-1.rds.amazonaws.com `
+#   --from-literal=db-password=Anurag1234 `
+#   --from-literal=jwt-secret=fstweAsDdDfdeFGEWEfrrt `
+#   --from-literal=s3-bucket=taskflow-files-devops

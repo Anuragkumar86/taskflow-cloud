@@ -1,0 +1,7 @@
+# File: taskflow-cloud/kubernetes/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taskflow
+  labels:
+    app: taskflow
