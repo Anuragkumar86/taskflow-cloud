@@ -1,6 +1,5 @@
 // File: taskflow-cloud/frontend/src/app/files/page.js
 // Purpose: Dedicated page showing all files uploaded to AWS S3
-// Why: Makes it visually clear that S3 is being used for file storage
 
 'use client';
 
@@ -11,7 +10,131 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import { fileAPI } from '@/lib/api';
 
-// Helper: return a nice icon based on file type
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  .files-root * { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 28px;
+  }
+
+  .s3-badge {
+    background: linear-gradient(135deg, rgba(249,115,22,0.12), rgba(234,88,12,0.08));
+    border: 1px solid rgba(249,115,22,0.25);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .file-table-wrap {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .file-table-head {
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .file-table-head th {
+    text-align: left;
+    padding: 12px 18px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .file-row td {
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #cbd5e1;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+
+  .file-row:last-child td { border-bottom: none; }
+
+  .file-row:hover td { background: rgba(255,255,255,0.025); }
+
+  .btn-download {
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(59,130,246,0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,0.2);
+    padding: 5px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-download:hover {
+    background: rgba(59,130,246,0.22);
+    border-color: rgba(59,130,246,0.4);
+  }
+
+  .btn-delete {
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(239,68,68,0.1);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.18);
+    padding: 5px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-delete:hover {
+    background: rgba(239,68,68,0.2);
+    border-color: rgba(239,68,68,0.35);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 64px 20px;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.07);
+    border-radius: 16px;
+  }
+
+  .count-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+  }
+  .btn-primary:hover { opacity: 0.88; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+`;
+
 function FileIcon({ mimeType }) {
   if (mimeType?.startsWith('image/')) return '🖼️';
   if (mimeType === 'application/pdf') return '📄';
@@ -19,7 +142,6 @@ function FileIcon({ mimeType }) {
   return '📎';
 }
 
-// Helper: format bytes into readable size
 function formatSize(bytes) {
   if (!bytes) return '—';
   if (bytes < 1024) return `${bytes} B`;
@@ -33,10 +155,7 @@ export default function FilesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!Cookies.get('taskflow_token')) {
-      router.push('/login');
-      return;
-    }
+    if (!Cookies.get('taskflow_token')) { router.push('/login'); return; }
     loadFiles();
   }, []);
 
@@ -73,102 +192,115 @@ export default function FilesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="files-root" style={{ minHeight: '100vh', background: '#0c0e16', color: '#e2e8f0' }}>
+      <style>{styles}</style>
       <Navbar />
-      <main className="max-w-5xl mx-auto px-6 py-8">
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Files</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            All files are stored in <span className="font-semibold text-orange-600">AWS S3</span>. 
-            Downloads use signed URLs (expire after 1 hour for security).
-          </p>
+        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316', boxShadow: '0 0 10px #f97316' }} />
+            <p style={{ color: '#64748b', fontSize: '13px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Storage</p>
+          </div>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.02em' }}>Files</h1>
+          <p style={{ color: '#64748b', fontSize: '14px', marginTop: 4 }}>All your uploaded assets, stored securely in AWS S3.</p>
         </div>
 
-        {/* AWS S3 Info Badge */}
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex items-center gap-3">
-          <span className="text-2xl">☁️</span>
+        {/* S3 Info Badge */}
+        <div className="s3-badge">
+          <div style={{
+            width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+            background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px'
+          }}>☁️</div>
           <div>
-            <p className="font-semibold text-orange-800">Connected to AWS S3</p>
-            <p className="text-orange-700 text-sm">
-              Files are securely stored in Amazon S3 with server-side encryption (AES-256).
-              Download links are temporary signed URLs generated by the backend.
+            <p style={{ fontWeight: 700, color: '#fb923c', fontSize: '14px' }}>Connected to AWS S3</p>
+            <p style={{ color: '#94a3b8', fontSize: '13px', marginTop: 2 }}>
+              Files are encrypted at rest (AES-256). Download links are temporary signed URLs — valid for 1 hour.
             </p>
           </div>
         </div>
 
-        {/* Files Count */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
-          <p className="text-gray-600 text-sm">
-            Total files: <span className="font-bold text-gray-900">{files.length}</span>
-          </p>
+        {/* File count */}
+        <div className="count-chip" style={{ alignSelf: 'flex-start' }}>
+          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{files.length}</span>
+          <span>file{files.length !== 1 ? 's' : ''} stored</span>
         </div>
 
-        {/* Files Table */}
+        {/* Table */}
         {loading ? (
-          <div className="text-center py-12 text-gray-400">Loading files from S3...</div>
+          <div style={{ textAlign: 'center', padding: '64px' }}>
+            <div style={{
+              width: 36, height: 36, border: '2px solid rgba(249,115,22,0.2)',
+              borderTop: '2px solid #f97316', borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite', margin: '0 auto 12px'
+            }} />
+            <p style={{ color: '#64748b', fontSize: '14px' }}>Loading files from S3…</p>
+          </div>
         ) : files.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-xl shadow-sm">
-            <p className="text-4xl mb-3">📁</p>
-            <p className="text-gray-500">No files uploaded yet.</p>
-            <p className="text-gray-400 text-sm mt-1">
+          <div className="empty-state">
+            <p style={{ fontSize: '40px', marginBottom: 12 }}>📁</p>
+            <p style={{ color: '#94a3b8', fontWeight: 600, fontSize: '16px' }}>No files uploaded yet</p>
+            <p style={{ color: '#64748b', fontSize: '13px', marginTop: 6, marginBottom: 20 }}>
               Go to any task and upload a file to see it here.
             </p>
-            <button
-              onClick={() => router.push('/projects')}
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
-            >
-              Go to Projects
-            </button>
+            <button className="btn-primary" onClick={() => router.push('/projects')}>Go to Projects</button>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+          <div className="file-table-wrap">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead className="file-table-head">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">File</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Task</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Size</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Uploaded</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                  <th>File</th>
+                  <th>Task</th>
+                  <th>Size</th>
+                  <th>Uploaded</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {files.map((file) => (
-                  <tr key={file.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl"><FileIcon mimeType={file.mime_type} /></span>
+                  <tr key={file.id} className="file-row">
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 9,
+                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '16px', flexShrink: 0
+                        }}>
+                          <FileIcon mimeType={file.mime_type} />
+                        </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 max-w-xs truncate">
+                          <p style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '13px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {file.original_name}
                           </p>
-                          <p className="text-xs text-gray-400">{file.mime_type}</p>
+                          <p style={{ color: '#475569', fontSize: '11px', marginTop: 1 }}>{file.mime_type}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-gray-700">{file.task_title || '—'}</p>
-                      <p className="text-xs text-gray-400">{file.project_name || '—'}</p>
+                    <td>
+                      <p style={{ color: '#94a3b8', fontSize: '13px' }}>{file.task_title || '—'}</p>
+                      <p style={{ color: '#475569', fontSize: '11px', marginTop: 1 }}>{file.project_name || '—'}</p>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {formatSize(file.file_size)}
+                    <td>
+                      <span style={{
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)',
+                        padding: '3px 8px', borderRadius: 6, fontSize: '12px', fontWeight: 600, color: '#94a3b8'
+                      }}>
+                        {formatSize(file.file_size)}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {new Date(file.created_at).toLocaleDateString()}
+                    <td style={{ color: '#64748b', fontSize: '12px' }}>
+                      {new Date(file.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleDownload(file.id, file.original_name)}
-                          className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded"
-                        >
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn-download" onClick={() => handleDownload(file.id, file.original_name)}>
                           ↓ Download
                         </button>
-                        <button
-                          onClick={() => handleDelete(file.id)}
-                          className="text-xs bg-red-100 text-red-600 hover:bg-red-200 px-2 py-1 rounded"
-                        >
+                        <button className="btn-delete" onClick={() => handleDelete(file.id)}>
                           Delete
                         </button>
                       </div>

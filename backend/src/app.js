@@ -27,10 +27,10 @@ app.use(helmet());
 
 // CORS: Allow requests from the frontend (Next.js on port 3000)
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: "*",
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  // credentials: true,
 }));
 
 // Rate limiting: Max 100 requests per 15 minutes per IP

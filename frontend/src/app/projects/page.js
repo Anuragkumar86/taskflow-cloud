@@ -10,6 +10,106 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import { projectAPI } from '@/lib/api';
 
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  .projects-root * { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 28px;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white; font-weight: 700; font-size: 13px;
+    padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer;
+    transition: opacity 0.15s; box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+    color: #94a3b8; font-size: 13px; font-weight: 500;
+    padding: 10px 20px; border-radius: 10px; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.09); color: #e2e8f0; }
+
+  .form-input {
+    width: 100%; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09); border-radius: 10px;
+    padding: 12px 14px; color: #e2e8f0; font-size: 14px;
+    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit; box-sizing: border-box;
+  }
+  .form-input:focus {
+    border-color: rgba(59,130,246,0.5);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  }
+  .form-input::placeholder { color: #475569; }
+
+  .project-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px;
+    padding: 22px;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden;
+  }
+  .project-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(59,130,246,0.04), transparent);
+    opacity: 0;
+    transition: opacity 0.18s;
+    pointer-events: none;
+    border-radius: 18px;
+  }
+  .project-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+    border-color: rgba(59,130,246,0.25);
+  }
+  .project-card:hover::after { opacity: 1; }
+
+  .badge-active {
+    background: rgba(16,185,129,0.12); color: #34d399;
+    border: 1px solid rgba(16,185,129,0.2);
+    font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .badge-inactive {
+    background: rgba(255,255,255,0.05); color: #64748b;
+    border: 1px solid rgba(255,255,255,0.07);
+    font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .delete-btn {
+    font-size: 12px; font-weight: 600;
+    color: #ef4444; background: transparent; border: none; cursor: pointer;
+    padding: 4px 8px; border-radius: 6px;
+    transition: background 0.12s;
+  }
+  .delete-btn:hover { background: rgba(239,68,68,0.1); }
+
+  .empty-state {
+    text-align: center; padding: 80px 20px;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.07); border-radius: 20px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+`;
+
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState([]);
@@ -19,10 +119,7 @@ export default function ProjectsPage() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (!Cookies.get('taskflow_token')) {
-      router.push('/login');
-      return;
-    }
+    if (!Cookies.get('taskflow_token')) { router.push('/login'); return; }
     loadProjects();
   }, []);
 
@@ -66,108 +163,109 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="projects-root" style={{ minHeight: '100vh', background: '#0c0e16', color: '#e2e8f0' }}>
+      <style>{styles}</style>
       <Navbar />
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+        {/* Header row */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 24 }}>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Projects</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage your workspaces and start new projects quickly.</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 10px #3b82f6' }} />
+              <p style={{ color: '#64748b', fontSize: '13px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Workspaces</p>
+            </div>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.02em' }}>Projects</h1>
+            <p style={{ color: '#64748b', fontSize: '14px', marginTop: 4 }}>Manage your workspaces and start new projects quickly.</p>
           </div>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-          >
-            + New Project
+          <button className="btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
+            {showCreateForm ? '✕ Close' : '+ New Project'}
           </button>
         </div>
 
-        {/* Create Project Form */}
+        {/* Create Form */}
         {showCreateForm && (
-          <form onSubmit={handleCreate} className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/30 mb-6">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900">Create New Project</h2>
-                <p className="text-sm text-slate-500">Enter project details to get started quickly.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                Close
-              </button>
+          <div className="panel">
+            <div style={{ marginBottom: 20 }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9' }}>Create New Project</h2>
+              <p style={{ color: '#64748b', fontSize: '13px', marginTop: 2 }}>Enter project details to get started quickly.</p>
             </div>
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Project name *"
-                value={newProject.name}
-                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                required
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-              <textarea
-                placeholder="Description (optional)"
-                value={newProject.description}
-                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 h-28 resize-none"
-              />
-              <div className="flex flex-wrap gap-3">
-                <button type="submit" disabled={creating}
-                  className="inline-flex min-w-40 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {creating ? 'Creating...' : 'Create Project'}
-                </button>
-                <button type="button" onClick={() => setShowCreateForm(false)}
-                  className="inline-flex min-w-30 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
+            <form onSubmit={handleCreate}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <input className="form-input" type="text" placeholder="Project name *"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })} required />
+                <textarea className="form-input" placeholder="Description (optional)"
+                  value={newProject.description}
+                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                  style={{ height: 100, resize: 'vertical' }} />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button type="submit" className="btn-primary" disabled={creating}>
+                    {creating ? 'Creating…' : 'Create Project'}
+                  </button>
+                  <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>Cancel</button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </div>
         )}
 
-        {/* Projects Grid */}
+        {/* Projects grid */}
         {loading ? (
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            <p className="text-slate-500">Loading projects...</p>
+          <div style={{ textAlign: 'center', padding: '64px' }}>
+            <div style={{
+              width: 36, height: 36, border: '2px solid rgba(59,130,246,0.2)',
+              borderTop: '2px solid #3b82f6', borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite', margin: '0 auto 12px'
+            }} />
+            <p style={{ color: '#64748b', fontSize: '14px' }}>Loading projects…</p>
           </div>
         ) : projects.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
-            <p className="text-lg font-semibold text-slate-900">No projects yet.</p>
-            <p className="mt-2 text-sm text-slate-500">Click "New Project" to get started.</p>
+          <div className="empty-state">
+            <p style={{ fontSize: '40px', marginBottom: 12 }}>🗂️</p>
+            <p style={{ color: '#94a3b8', fontWeight: 700, fontSize: '17px' }}>No projects yet</p>
+            <p style={{ color: '#64748b', fontSize: '13px', marginTop: 6, marginBottom: 20 }}>Click "New Project" to get started.</p>
+            <button className="btn-primary" onClick={() => setShowCreateForm(true)}>+ Create First Project</button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {projects.map((project) => (
-              <div
-                key={project.id}
-                onClick={() => router.push(`/projects/${project.id}`)}
-                className="group flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-              >
+              <div key={project.id} className="project-card" onClick={() => router.push(`/projects/${project.id}`)}>
                 <div>
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <h3 className="text-lg font-semibold text-slate-900">{project.name}</h3>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      project.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                    }`}>
+                  {/* Card top */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                        background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.15))',
+                        border: '1px solid rgba(59,130,246,0.2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                      }}>📌</div>
+                      <h3 style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '15px', lineHeight: 1.3 }}>{project.name}</h3>
+                    </div>
+                    <span className={project.status === 'active' ? 'badge-active' : 'badge-inactive'} style={{ flexShrink: 0 }}>
                       {project.status}
                     </span>
                   </div>
-                  <p className="text-sm leading-6 text-slate-500 mb-5 min-h-13">
-                    {project.description || 'No description'}
+                  <p style={{ color: '#64748b', fontSize: '13px', lineHeight: 1.6, minHeight: 40, marginBottom: 16 }}>
+                    {project.description || 'No description provided.'}
                   </p>
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>{project.task_count} tasks · {project.completed_count} done</span>
-                  <button
-                    onClick={(e) => handleDelete(project.id, e)}
-                    className="rounded-full px-2 py-1 text-red-500 transition hover:bg-red-50 hover:text-red-600"
-                  >
-                    Delete
-                  </button>
+
+                {/* Card bottom */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '16px', fontWeight: 800, color: '#e2e8f0' }}>{project.task_count}</p>
+                      <p style={{ fontSize: '11px', color: '#475569', fontWeight: 500 }}>Tasks</p>
+                    </div>
+                    <div style={{ width: 1, background: 'rgba(255,255,255,0.06)' }} />
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '16px', fontWeight: 800, color: '#34d399' }}>{project.completed_count}</p>
+                      <p style={{ fontSize: '11px', color: '#475569', fontWeight: 500 }}>Done</p>
+                    </div>
+                  </div>
+                  <button className="delete-btn" onClick={(e) => handleDelete(project.id, e)}>Delete</button>
                 </div>
               </div>
             ))}
