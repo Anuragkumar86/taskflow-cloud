@@ -26,10 +26,13 @@ COPY . .
 # Tell Docker this container listens on port 5000
 EXPOSE 5000
 
-# Create a non-root user (security best practice)
-# Running as root inside containers is dangerous
+# Create uploads directory with proper permissions
+RUN mkdir -p /app/uploads && chmod -R 777 /app/uploads
+
+# Create non-root user
 RUN addgroup -g 1001 -S appgroup && \
     adduser -S appuser -u 1001 -G appgroup
+
 USER appuser
 
 # Command to run when container starts
