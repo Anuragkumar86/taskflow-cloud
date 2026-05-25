@@ -152,4 +152,4 @@ const getProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getProfile };
+module.exports = { register, login, getProfile };     
